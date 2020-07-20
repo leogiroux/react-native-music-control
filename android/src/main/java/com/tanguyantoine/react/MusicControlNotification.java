@@ -1,27 +1,21 @@
 package com.tanguyantoine.react;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.IBinder;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.KeyEvent;
+
 import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReadableMap;
 
 import java.util.Map;
 
-import static androidx.core.app.NotificationCompat.PRIORITY_MIN;
-import static com.tanguyantoine.react.MusicControlModule.CHANNEL_ID;
-import static com.tanguyantoine.react.MusicControlModule.NOTIFICATION_ID;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 public class MusicControlNotification {
 
@@ -82,7 +76,7 @@ public class MusicControlNotification {
 
     /**
      * NOTE: Synchronized since the NotificationService called prepare without a re-entrant lock.
-     *       Other call sites (e.g. show/hide in module) are already synchronized.
+     * Other call sites (e.g. show/hide in module) are already synchronized.
      */
     public synchronized Notification prepareNotification(NotificationCompat.Builder builder, boolean isPlaying) {
         // Add the buttons
@@ -121,11 +115,11 @@ public class MusicControlNotification {
     }
 
     public synchronized void show(NotificationCompat.Builder builder, boolean isPlaying) {
-        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, prepareNotification(builder, isPlaying));
+        NotificationManagerCompat.from(context).notify(MusicControlModule.INSTANCE.getNotificationId(), prepareNotification(builder, isPlaying));
     }
 
     public void hide() {
-        NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID);
+        NotificationManagerCompat.from(context).cancel(MusicControlModule.INSTANCE.getNotificationId());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
@@ -187,35 +181,26 @@ public class MusicControlNotification {
             return null;
         }
 
-        private boolean isRunning;
         private Notification notification;
 
         @Override
         public void onCreate() {
             super.onCreate();
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                notification = MusicControlModule.INSTANCE.notification.prepareNotification(MusicControlModule.INSTANCE.nb, false);
-                startForeground(NOTIFICATION_ID, notification);
-                isRunning = true;
-            }
+            notification = MusicControlModule.INSTANCE.notification.prepareNotification(MusicControlModule.INSTANCE.nb, false);
+            startForeground(MusicControlModule.INSTANCE.getNotificationId(), notification);
         }
 
         @Override
         public int onStartCommand(Intent intent, int flags, int startId) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (intent.getAction() != null && intent.getAction().equals("StopService") && notification != null && isRunning) {
-                    stopForeground(true);
-                    isRunning = false;
-                    stopSelf();
-                }
+                notification = MusicControlModule.INSTANCE.notification.prepareNotification(MusicControlModule.INSTANCE.nb, false);
+                startForeground(MusicControlModule.INSTANCE.getNotificationId(), notification);
             }
             return START_NOT_STICKY;
         }
 
         @Override
         public void onTaskRemoved(Intent rootIntent) {
-            isRunning = false;
             // Destroy the notification and sessions when the task is removed (closed, killed, etc)
             if (MusicControlModule.INSTANCE != null) {
                 MusicControlModule.INSTANCE.destroy();
@@ -228,7 +213,6 @@ public class MusicControlNotification {
 
         @Override
         public void onDestroy() {
-            isRunning = false;
 
             if (MusicControlModule.INSTANCE != null) {
                 MusicControlModule.INSTANCE.destroy();

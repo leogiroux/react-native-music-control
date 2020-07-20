@@ -2,12 +2,13 @@ package com.tanguyantoine.react;
 
 import android.content.Intent;
 import android.os.Build;
-import androidx.core.content.ContextCompat;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+
+import androidx.core.app.NotificationManagerCompat;
 
 public class MusicControlEventEmitter {
     private static void sendEvent(ReactApplicationContext context, String type, Object value) {
@@ -28,9 +29,11 @@ public class MusicControlEventEmitter {
     }
 
     private final ReactApplicationContext context;
+    private int notificationId;
 
-    MusicControlEventEmitter(ReactApplicationContext context) {
+    MusicControlEventEmitter(ReactApplicationContext context, int notificationId) {
         this.context = context;
+        this.notificationId = notificationId;
     }
 
     public void onPlay() {
@@ -79,10 +82,11 @@ public class MusicControlEventEmitter {
     }
 
     private void stopForegroundService() {
+        NotificationManagerCompat.from(context).cancel(notificationId);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent intent = new Intent(context, MusicControlNotification.NotificationService.class);
-            intent.setAction("StopService");
-            ContextCompat.startForegroundService(context, intent);
+            Intent myIntent =
+                    new Intent(context, MusicControlNotification.NotificationService.class);
+            context.stopService(myIntent);
         }
     }
 }
